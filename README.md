@@ -32,7 +32,8 @@ npm run build         # пересобирает Lampa и делает уста�
 ### Выпуск версии
 ```powershell
 npm run version -- 1.0.1
-git commit -am "v1.0.1"
+git add -A
+git commit -m "v1.0.1"
 git tag v1.0.1
 git push origin HEAD v1.0.1
 ```

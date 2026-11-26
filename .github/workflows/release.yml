@@ -1,0 +1,51 @@
+# Релиз: git tag v1.0.1 && git push origin v1.0.1
+# Собирает свежую Lampa из yumata/lampa-source, приложение, подписывает установщики
+# ключом обновлений и публикует GitHub Release с latest.json для автообновления.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install wrapper dependencies
+        run: npm ci
+
+      - name: Check tag matches app version
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        run: |
+          v=$(node -p "require('./src-tauri/tauri.conf.json').version")
+          [ "v$v" = "${GITHUB_REF_NAME}" ] || { echo "Тег ${GITHUB_REF_NAME} не совпадает с версией $v (npm run version -- <версия>)"; exit 1; }
+
+      # beforeBuildCommand (npm run build:lampa) клонирует и собирает lampa-source
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: Lampa ${{ github.ref_name }}
+          releaseBody: Сборка Lampa Desktop. Установленное приложение обновится само.
+          releaseDraft: false
+          includeUpdaterJson: true
