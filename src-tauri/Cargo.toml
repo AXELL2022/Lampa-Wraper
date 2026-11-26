@@ -1,6 +1,6 @@
 [package]
 name = "lampa"
-version = "1.0.1"
+version = "1.0.2"
 description = "Lampa desktop (Tauri wrapper)"
 edition = "2021"
 
