@@ -1,0 +1,4 @@
+node_modules/
+lampa-source/
+src-tauri/target/
+src-tauri/gen/
