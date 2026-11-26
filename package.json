@@ -1,13 +1,14 @@
 {
   "name": "lampa-tauri",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "type": "module",
   "scripts": {
     "build:lampa": "node scripts/build-lampa.mjs",
     "dev": "tauri dev",
-    "build": "tauri build",
-    "tauri": "tauri"
+    "build": "node scripts/tauri-build.mjs",
+    "tauri": "tauri",
+    "version": "node scripts/set-version.mjs"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2"

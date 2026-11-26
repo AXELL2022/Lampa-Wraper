@@ -16,6 +16,29 @@ npm run build         # пересобирает Lampa и делает уста�
 
 Результат: `src-tauri/target/release/lampa.exe`, установщики — в `src-tauri/target/release/bundle/`.
 
+## Автообновление приложения
+При запуске приложение проверяет последний релиз на GitHub
+(`https://github.com/AXELL2022/Lampa-Wraper/releases/latest/download/latest.json`).
+Если версия новее, спрашивает «Обновить?», скачивает установщик, проверяет его подпись
+(публичный ключ лежит в `tauri.conf.json`), ставит и перезапускается. Вручную проверить можно
+из трея: «Проверить обновления».
+
+### Один раз: ключ подписи
+Приватный ключ: `~/.tauri/lampa-updater.key`, пароль пустой. **Не коммитьте его и не теряйте:** без него
+нельзя выпустить обновление, которое примут уже установленные копии.
+Добавьте его в GitHub → Settings → Secrets and variables → Actions → секрет
+`TAURI_SIGNING_PRIVATE_KEY` (содержимое файла целиком). Локальный `npm run build` подхватит ключ сам.
+
+### Выпуск версии
+```powershell
+npm run version -- 1.0.1
+git commit -am "v1.0.1"
+git tag v1.0.1
+git push origin HEAD v1.0.1
+```
+Workflow `.github/workflows/release.yml` соберёт свежую Lampa и приложение, подпишет их и опубликует
+релиз с `latest.json`. Установленные копии предложат обновиться при следующем запуске.
+
 ## Обновление Lampa
 ```powershell
 git -C lampa-source pull
@@ -29,6 +52,10 @@ npm run build
 - `src-tauri/tauri.conf.json` — `frontendDist` указывает на `lampa-source/build/web`, CSP выключен
   (Lampa ходит на множество внешних API, CDN и в TorrServer по http).
 - F11 — полноэкранный режим.
+- Трей (`src-tauri/src/tray.rs`, по образцу Anivox-Wraper): левый клик скрывает или показывает окно,
+  в меню «Открыть», «Сворачивать в трей», «Проверить обновления» и «Выход». При включённой галочке крестик прячет окно в трей.
+  Настройка хранится в `%APPDATA%\com.lampa.desktop\tray.json`, по умолчанию включена.
+  Повторный запуск приложения показывает уже открытое окно (single-instance).
 - Lampa всегда загружает `plugins/modification.js`. Tauri на отсутствующий файл отдаёт `index.html`
   (ошибка «Unexpected token '<'»), поэтому сборка кладёт туда заглушку. Свой код для этого хука
   можно положить в `modification.js` в корне проекта: он попадёт в сборку.
