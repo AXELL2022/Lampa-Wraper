@@ -166,6 +166,90 @@
             .catch(function (err) { throw new TypeError('Failed to fetch: ' + err); });
     };
 
+    // ---- Встроенный TorrServer: адрес по умолчанию и индикатор в шапке ----
+    var TS_URL = 'http://127.0.0.1:8090';
+    try {
+        // Только если пользователь ещё не указал свой сервер
+        if (!localStorage.getItem('torrserver_url')) localStorage.setItem('torrserver_url', TS_URL);
+    } catch (e) {}
+
+    var TS_TEXT = {
+        running: 'TorrServer работает',
+        external: 'Работает внешний TorrServer',
+        starting: 'TorrServer запускается…',
+        stopped: 'TorrServer не запущен'
+    };
+    var tsStatus = { state: 'starting' };
+    var tsTimer = null;
+    var tsButton = null;
+
+    function tsRender() {
+        if (!tsButton) return;
+        tsButton.setAttribute('data-state', tsStatus.state);
+        tsButton.title = TS_TEXT[tsStatus.state] + (tsStatus.version ? ' (' + tsStatus.version + ')' : '');
+    }
+
+    function tsPoll() {
+        clearTimeout(tsTimer);
+        invoke('torrserver_status')
+            .then(function (s) { tsStatus = s; })
+            .catch(function () { tsStatus = { state: 'stopped' }; })
+            .then(function () {
+                tsRender();
+                tsTimer = setTimeout(tsPoll, tsStatus.state === 'starting' ? 1000 : 5000);
+            });
+    }
+
+    function tsRestart() {
+        tsStatus = { state: 'starting' };
+        tsRender();
+        invoke('torrserver_restart')
+            .catch(function (err) { if (Lampa.Noty) Lampa.Noty.show(String(err)); })
+            .then(tsPoll);
+    }
+
+    function tsMenu() {
+        var items = [];
+        if (tsStatus.state !== 'stopped') items.push({ title: 'Открыть веб-интерфейс', action: 'web' });
+        if (tsStatus.state !== 'external') items.push({ title: tsStatus.state === 'stopped' ? 'Запустить' : 'Перезапустить', action: 'restart' });
+        var subtitle = tsStatus.version ? tsStatus.version + ' · 127.0.0.1:8090' : (tsStatus.error || '127.0.0.1:8090');
+        Lampa.Select.show({
+            title: TS_TEXT[tsStatus.state],
+            items: [{ title: subtitle, separator: true }].concat(items),
+            onSelect: function (a) {
+                Lampa.Controller.toggle('head');
+                if (a.action === 'web') invoke('plugin:opener|open_url', { url: TS_URL });
+                if (a.action === 'restart') tsRestart();
+            },
+            onBack: function () { Lampa.Controller.toggle('head'); }
+        });
+    }
+
+    var tsStyle = document.createElement('style');
+    tsStyle.textContent =
+        '.lampa-ts{position:relative}' +
+        '.lampa-ts svg{width:100%;height:100%}' +
+        '.lampa-ts::after{content:"";position:absolute;top:.1em;right:.1em;width:.65em;height:.65em;' +
+        'border-radius:50%;border:.15em solid #1d1f20;background:#888;transition:background .3s}' +
+        '.lampa-ts[data-state="running"]::after{background:#4caf50}' +
+        '.lampa-ts[data-state="external"]::after{background:#2196f3}' +
+        '.lampa-ts[data-state="starting"]::after{background:#ffc107}' +
+        '.lampa-ts[data-state="stopped"]::after{background:#ea4e4e}';
+
+    var tsInstall = setInterval(function () {
+        if (!window.Lampa || !Lampa.Head || !Lampa.Select || !document.querySelector('.head__actions')) return;
+        clearInterval(tsInstall);
+        document.head.appendChild(tsStyle);
+        // Иконка «сервер»
+        var svg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">' +
+            '<rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/>' +
+            '<path d="M7 7.5h.01M7 16.5h.01M11 7.5h6M11 16.5h6"/></svg>';
+        var el = Lampa.Head.addIcon(svg, tsMenu);
+        el.addClass('lampa-ts');
+        tsButton = el[0];
+        tsPoll();
+    }, 300);
+
     // ---- F11 — полноэкранный режим ----
     document.addEventListener('keydown', function (e) {
         if (e.key === 'F11') {

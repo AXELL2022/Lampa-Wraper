@@ -1,4 +1,7 @@
+use tauri::Manager;
+
 mod external;
+mod torrserver;
 mod tray;
 mod updater;
 
@@ -18,8 +21,10 @@ pub fn run() {
                 .build(),
         )
         .manage(external::Processes::default())
+        .manage(torrserver::TorrServer::default())
         .setup(|app| {
             tray::setup(app)?;
+            torrserver::start_in_background(app.handle());
             // Debug-сборки (tauri dev) не трогают релизы
             if !cfg!(debug_assertions) {
                 updater::check_in_background(app.handle(), false);
@@ -32,7 +37,16 @@ pub fn run() {
             external::lampa_kill,
             external::lampa_local_get,
             external::lampa_ipc_exchange,
+            torrserver::torrserver_status,
+            torrserver::torrserver_restart,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running Lampa");
+        .build(tauri::generate_context!())
+        .expect("error while running Lampa")
+        .run(|app, event| {
+            // «Выход» из трея и закрытие окна: гасим TorrServer сразу (Job Object
+            // подстрахует, если процесс завершится иначе, например при обновлении)
+            if let tauri::RunEvent::Exit = event {
+                app.state::<torrserver::TorrServer>().stop();
+            }
+        });
 }

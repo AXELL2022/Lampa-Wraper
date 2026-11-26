@@ -9,9 +9,10 @@ Node.js, Rust (stable), WebView2 (есть в Windows 10/11).
 ## Команды
 ```powershell
 npm install
-npm run build:lampa   # клонирует (если нужно) и собирает lampa-source -> lampa-source/build/web
+npm run build:lampa   # скачивает TorrServer (если нужно), клонирует и собирает lampa-source -> lampa-source/build/web
 npm run dev           # запуск в режиме разработки (сначала один раз build:lampa)
 npm run build         # пересобирает Lampa и делает установщики (NSIS + MSI)
+npm run fetch:torrserver   # перекачать TorrServer (последний MatriX) перед сборкой
 ```
 
 Результат: `src-tauri/target/release/lampa.exe`, установщики — в `src-tauri/target/release/bundle/`.
@@ -39,6 +40,23 @@ git push origin HEAD v1.0.1
 ```
 Workflow `.github/workflows/release.yml` соберёт свежую Lampa и приложение, подпишет их и опубликует
 релиз с `latest.json`. Установленные копии предложат обновиться при следующем запуске.
+
+## Встроенный TorrServer
+В установщик входит [TorrServer](https://github.com/YouROK/TorrServer) ветки **MatriX**
+(`scripts/fetch-torrserver.mjs` берёт последний стабильный релиз MatriX; экспериментальная ветка Silo
+с Lampa не работает и пропускается; конкретную версию можно задать в `TORRSERVER_VERSION`).
+Файл лежит в `src-tauri/binaries/` (в git не попадает) и ставится рядом с `lampa.exe` как `TorrServer.exe`.
+
+- Запускается при старте приложения скрыто, без окна консоли, на `127.0.0.1:8090`.
+  База и лог: `%APPDATA%\com.lampa.desktop\torrserver`.
+- Если адрес TorrServer в настройках Lampa пуст, подставляется `http://127.0.0.1:8090`. Свой адрес не трогается.
+- В шапке есть иконка сервера с точкой: зелёная — работает, синяя — на порту 8090 отвечает уже
+  запущенный внешний TorrServer (тогда свой не запускается), жёлтая — запускается, красная — не работает.
+  По нажатию: версия, «Открыть веб-интерфейс», «Перезапустить» / «Запустить».
+- При выходе из приложения TorrServer закрывается. Процесс привязан к Job Object Windows, поэтому он
+  завершается и при обновлении или аварийном закрытии Lampa.
+- При первом запуске Windows может спросить разрешение брандмауэра для TorrServer.exe (входящие
+  подключения торрент-пиров). Веб-интерфейс доступен только с этого компьютера.
 
 ## Обновление Lampa
 ```powershell

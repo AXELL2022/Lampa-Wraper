@@ -1,14 +1,15 @@
 {
   "name": "lampa-tauri",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "private": true,
   "type": "module",
   "scripts": {
-    "build:lampa": "node scripts/build-lampa.mjs",
+    "build:lampa": "node scripts/fetch-torrserver.mjs && node scripts/build-lampa.mjs",
     "dev": "tauri dev",
     "build": "node scripts/tauri-build.mjs",
     "tauri": "tauri",
-    "version": "node scripts/set-version.mjs"
+    "version": "node scripts/set-version.mjs",
+    "fetch:torrserver": "node scripts/fetch-torrserver.mjs --force"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2"
