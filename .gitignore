@@ -3,3 +3,4 @@ lampa-source/
 src-tauri/target/
 src-tauri/gen/
 src-tauri/binaries/
+actions-runner/
